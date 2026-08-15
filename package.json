@@ -1,10 +1,11 @@
 {
   "name": "saku-wechat-compiler",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": true,
   "description": "Offline Markdown-compatible layout editor for WeChat Official Accounts",
   "author": "SakuWechatCompiler contributors",
   "license": "MIT",
+  "packageManager": "pnpm@11.19.0",
   "type": "module",
   "main": "./out/main/main.js",
   "scripts": {

@@ -14,6 +14,8 @@ declare global {
       saveDocument: (request: {
         content: string
         currentPath?: string | null
+        suggestedName?: string
+        sourcePath?: string | null
         saveAs?: boolean
       }) => Promise<{ path: string; name: string } | null>
       openProject: () => Promise<{
@@ -24,6 +26,8 @@ declare global {
       saveProject: (request: {
         content: string
         currentPath?: string | null
+        suggestedName?: string
+        sourcePath?: string | null
         saveAs?: boolean
       }) => Promise<{ path: string; name: string } | null>
       exportPdf: (request: {
