@@ -84,6 +84,38 @@ export const sanitizeInlineStyle = (cssText: string): string => {
 const placeholderHtml = (imageId: string, caption: string): string =>
   `<div data-saku-image-id="${escapeAttribute(imageId)}" data-saku-image-caption="${escapeAttribute(caption)}"></div>`
 
+const replaceElementTag = (documentNode: Document, element: Element, tagName: 'strong' | 'em'): HTMLElement => {
+  const replacement = documentNode.createElement(tagName)
+  while (element.firstChild) replacement.append(element.firstChild)
+  element.replaceWith(replacement)
+  return replacement
+}
+
+const normalizeWordInlineRuns = (documentNode: Document): void => {
+  documentNode.body.querySelectorAll('b').forEach((element) => replaceElementTag(documentNode, element, 'strong'))
+  documentNode.body.querySelectorAll('i').forEach((element) => replaceElementTag(documentNode, element, 'em'))
+
+  // Word may leave bookmarks or empty runs between two pieces of the same formatted text.
+  // Their attributes are removed by the sanitizer, so keeping the empty element would only
+  // prevent the neighbouring runs from being merged.
+  documentNode.body.querySelectorAll('a:not([href]), span:not([style])').forEach((element) => {
+    if (!element.textContent && element.childNodes.length === 0) element.remove()
+  })
+
+  let merged = true
+  while (merged) {
+    merged = false
+    documentNode.body.querySelectorAll('strong,em').forEach((element) => {
+      const sibling = element.nextSibling
+      if (!(sibling instanceof HTMLElement) || sibling.tagName !== element.tagName) return
+
+      while (sibling.firstChild) element.append(sibling.firstChild)
+      sibling.remove()
+      merged = true
+    })
+  }
+}
+
 const tableToMarkdown = (table: HTMLElement): string => {
   const rows = Array.from(table.querySelectorAll('tr')).map((row) =>
     Array.from(row.querySelectorAll('th,td')).map((cell) => (cell.textContent ?? '').trim().replaceAll('|', '\\|'))
@@ -184,6 +216,8 @@ export const sanitizeEditorHtml = (unsafeHtml: string): string => {
       else element.removeAttribute('style')
     }
   })
+
+  normalizeWordInlineRuns(documentNode)
 
   return documentNode.body.innerHTML
 }

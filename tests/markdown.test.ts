@@ -141,6 +141,27 @@ describe('Saku 扩展 Markdown', () => {
 
     expect(combined).toContain('***组合格式***')
     expect(combinedHtml).toMatch(/<(strong|em)><(em|strong)>组合格式<\/\2><\/\1>/)
+
+    const trailingSpace = richTextToMarkdown('<p><strong>中文粗体 </strong>后文</p>')
+    expect(trailingSpace).toContain('**中文粗体** 后文')
+
+    const splitWordRuns = richTextToMarkdown(
+      '<p><strong>连续中文</strong><strong>被 Word 拆分</strong>后文</p>'
+    )
+    const splitWordRunsHtml = markdownToHtml(splitWordRuns)
+    expect(splitWordRuns).toContain('**连续中文被 Word 拆分**后文')
+    expect(splitWordRuns).not.toContain('****')
+    expect(splitWordRunsHtml).toContain('<strong>连续中文被 Word 拆分</strong>后文')
+
+    const bookmarkBetweenRuns = richTextToMarkdown(
+      '<p><strong>书签前</strong><a id="_WordBookmark"></a><strong>书签后</strong>正文</p>'
+    )
+    expect(bookmarkBetweenRuns).toContain('**书签前书签后**正文')
+
+    const intentionallySpacedRuns = richTextToMarkdown(
+      '<p><strong>第一段</strong> <strong>第二段</strong></p>'
+    )
+    expect(intentionallySpacedRuns).toContain('**第一段** **第二段**')
   })
 
   it('安全往返包含引号的全部字体选项，不把 span 标签显示为正文', () => {
