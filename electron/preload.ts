@@ -12,6 +12,7 @@ const api = {
   writeRichText: (html: string, text: string) =>
     ipcRenderer.invoke('clipboard:write-rich-text', html, text),
   setDirtyState: (dirty: boolean) => ipcRenderer.send('app:set-dirty', dirty),
+  checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates'),
   platform: process.platform,
   architecture: process.arch
 }

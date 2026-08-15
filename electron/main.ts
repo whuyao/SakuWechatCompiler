@@ -7,12 +7,14 @@ import {
   Menu,
   type MenuItemConstructorOptions,
   nativeImage,
+  net,
   shell
 } from 'electron'
 import { readFile, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
 import * as mammoth from 'mammoth'
 import { createPrintablePdfHtml } from '../src/lib/pdf'
+import { compareVersions, parseGitHubRelease, type UpdateCheckResult } from '../src/lib/update'
 
 type SaveRequest = {
   content: string
@@ -52,6 +54,63 @@ const showAboutDialog = async (): Promise<void> => {
   })
 
   if (result.response === 0) await shell.openExternal('https://urbancomp.net')
+}
+
+const GITHUB_LATEST_RELEASE_API = 'https://api.github.com/repos/whuyao/SakuWechatCompiler/releases/latest'
+
+const checkForUpdates = async (parentWindow?: BrowserWindow): Promise<UpdateCheckResult> => {
+  const currentVersion = app.getVersion()
+
+  try {
+    const response = await net.fetch(GITHUB_LATEST_RELEASE_API, {
+      signal: AbortSignal.timeout(12_000),
+      headers: {
+        Accept: 'application/vnd.github+json',
+        'User-Agent': `SakuWechatCompiler/${currentVersion}`,
+        'X-GitHub-Api-Version': '2022-11-28'
+      }
+    })
+    if (!response.ok) throw new Error(`GitHub API 返回 ${response.status}`)
+
+    const release = parseGitHubRelease(await response.json())
+    if (compareVersions(release.version, currentVersion) <= 0) {
+      await dialog.showMessageBox(parentWindow ?? undefined, {
+        type: 'info',
+        title: '检查更新',
+        message: '当前已是最新版本',
+        detail: `当前版本：${currentVersion}\n最新版本：${release.version}`,
+        buttons: ['好'],
+        noLink: true
+      })
+      return { status: 'up-to-date', currentVersion, latestVersion: release.version }
+    }
+
+    const notes = release.notes.length > 1200 ? `${release.notes.slice(0, 1200)}…` : release.notes
+    const result = await dialog.showMessageBox(parentWindow ?? undefined, {
+      type: 'info',
+      title: '发现新版本',
+      message: `SakuWechatCompiler ${release.version} 可以更新`,
+      detail: `当前版本：${currentVersion}\n最新版本：${release.version}${notes ? `\n\n更新说明\n${notes}` : ''}\n\n更新不会自动安装；选择下载后，请打开 DMG 完成替换。`,
+      buttons: ['下载更新', '稍后'],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true
+    })
+
+    if (result.response === 0) await shell.openExternal(release.downloadUrl ?? release.pageUrl)
+    return { status: 'available', currentVersion, latestVersion: release.version }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '未知错误'
+    await dialog.showMessageBox(parentWindow ?? undefined, {
+      type: 'warning',
+      title: '无法检查更新',
+      message: '暂时无法连接 GitHub Release。',
+      detail: `${message}\n\n应用仍可离线正常使用，请稍后重试。`,
+      buttons: ['好'],
+      noLink: true
+    })
+    return { status: 'error', currentVersion, message }
+  }
 }
 
 const installApplicationMenu = (): void => {
@@ -107,6 +166,11 @@ const installApplicationMenu = (): void => {
     {
       label: '帮助',
       submenu: [
+        {
+          label: '检查更新…',
+          click: () => void checkForUpdates(BrowserWindow.getFocusedWindow() ?? undefined)
+        },
+        { type: 'separator' },
         { label: 'UrbanComp 官网', click: () => void shell.openExternal('https://urbancomp.net') },
         { label: '关于 SakuWechatCompiler', click: () => void showAboutDialog() }
       ]
@@ -176,6 +240,10 @@ const registerIpc = (): void => {
   ipcMain.on('app:set-dirty', (event, dirty: boolean) => {
     const window = BrowserWindow.fromWebContents(event.sender)
     if (window) dirtyWindows.set(window.id, Boolean(dirty))
+  })
+
+  ipcMain.handle('app:check-for-updates', async (event) => {
+    return checkForUpdates(BrowserWindow.fromWebContents(event.sender) ?? undefined)
   })
 
   ipcMain.handle('content:import', async () => {

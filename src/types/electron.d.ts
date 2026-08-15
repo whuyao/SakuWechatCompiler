@@ -32,6 +32,12 @@ declare global {
       }) => Promise<{ path: string; name: string } | null>
       writeRichText: (html: string, text: string) => Promise<boolean>
       setDirtyState: (dirty: boolean) => void
+      checkForUpdates: () => Promise<{
+        status: 'available' | 'up-to-date' | 'error'
+        currentVersion: string
+        latestVersion?: string
+        message?: string
+      }>
       platform: string
       architecture: string
     }

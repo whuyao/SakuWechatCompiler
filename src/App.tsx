@@ -90,6 +90,7 @@ function App() {
   const [previewMode, setPreviewMode] = useState<PreviewMode>('final')
   const [utilityDrawer, setUtilityDrawer] = useState<UtilityDrawer>(null)
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('boxes')
+  const [checkingForUpdates, setCheckingForUpdates] = useState(false)
   const sourceSyncTimer = useRef<number | null>(null)
   const sourceTextareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -466,6 +467,23 @@ function App() {
     }
   }
 
+  const checkForUpdates = async () => {
+    if (!window.saku || checkingForUpdates) {
+      if (!window.saku) notify('请在 Electron 桌面应用中检查更新。', 'error')
+      return
+    }
+
+    setCheckingForUpdates(true)
+    try {
+      const result = await window.saku.checkForUpdates()
+      if (result.status === 'available') notify(`发现新版本 ${result.latestVersion}，可由你决定是否下载。`, 'info')
+      if (result.status === 'up-to-date') notify(`当前 ${result.currentVersion} 已是最新版本。`)
+      if (result.status === 'error') notify('检查更新失败，应用仍可离线使用。', 'error')
+    } finally {
+      setCheckingForUpdates(false)
+    }
+  }
+
   const applyBox = (preset: string) => {
     if (!editor) return
     if (editor.isActive('sakuBox')) {
@@ -545,6 +563,9 @@ function App() {
           <button onClick={importContent}>导入 MD / DOCX</button>
           <button onClick={() => void exportMarkdown(true)}>导出 MD</button>
           <button onClick={() => void exportPdf()}>导出 PDF</button>
+          <button title="只在点击时连接 GitHub Release" disabled={checkingForUpdates} onClick={() => void checkForUpdates()}>
+            {checkingForUpdates ? '检查中…' : '检查更新'}
+          </button>
           <button
             className={`utility-action theme-action ${utilityDrawer === 'themes' ? 'active' : ''}`}
             onClick={() => setUtilityDrawer((current) => current === 'themes' ? null : 'themes')}

@@ -2,7 +2,7 @@
 
 SakuWechatCompiler 是一款面向微信公众号的本地排版编辑器。主编辑区左侧编写 Markdown，右侧实时显示微信公众号排版效果。应用仅面向 Apple Silicon Mac，安装后无需联网即可编辑、保存和生成微信富文本。
 
-当前版本：`0.2.2`
+当前版本：`0.2.3`
 
 由 [UrbanComp 团队](https://urbancomp.net)制作。
 
@@ -10,7 +10,7 @@ SakuWechatCompiler 是一款面向微信公众号的本地排版编辑器。主�
 
 ### Markdown 与微信公众号最终状态
 
-左侧编辑 Markdown，右侧显示复制到微信公众号和导出 PDF 时使用的最终排版；顶部集中提供 Markdown 快捷按钮、文字样式、微信行距、主题、目录和文件操作。
+左侧编辑 Markdown，右侧显示复制到微信公众号和导出 PDF 时使用的最终排版；顶部集中提供 Markdown 快捷按钮、文字样式、微信行距、主题、目录、检查更新和文件操作。
 
 ![Markdown 双栏编辑与微信公众号最终预览](docs/images/editor-overview.jpg)
 
@@ -28,7 +28,7 @@ SakuWechatCompiler 是一款面向微信公众号的本地排版编辑器。主�
 
 ## 下载与安装
 
-1. 在 [GitHub Releases](https://github.com/whuyao/SakuWechatCompiler/releases) 下载 `SakuWechatCompiler-0.2.2-arm64.dmg`。
+1. 在 [GitHub Releases](https://github.com/whuyao/SakuWechatCompiler/releases) 下载 `SakuWechatCompiler-0.2.3-arm64.dmg`。
 2. 打开 DMG，把 SakuWechatCompiler 拖入“应用程序”。
 3. 当前安装包尚未使用 Developer ID 签名。首次启动如被 macOS 拦截，请在 Finder 中右键应用并选择“打开”。
 
@@ -49,6 +49,15 @@ SakuWechatCompiler 是一款面向微信公众号的本地排版编辑器。主�
 ```
 
 DOCX 中的图片不会直接嵌入 Markdown，也不会尝试上传到微信。应用会按顺序生成 `word-image-01`、`word-image-02` 等占位符，保留图片的替代文字并提示图片数量；排版完成后，在微信公众号后台对应位置重新插入图片即可。
+
+## 0.2.3 重点更新
+
+- 顶部工具栏和 macOS“帮助”菜单新增“检查更新”。
+- 只有用户主动点击时才访问本项目的 GitHub Latest Release；不会后台联网，也不会强制更新。
+- 发现新版本时显示当前版本、最新版本和更新说明，由用户选择“下载更新”或“稍后”。
+- “下载更新”优先打开 Apple Silicon DMG；因为当前安装包尚未签名，下载后仍由用户手动打开 DMG 并替换应用。
+- 对 Release 版本号、仓库地址和下载地址进行校验，网络失败时不影响离线编辑。
+- 网络连接超过 12 秒会自动结束检查并恢复按钮，不会让界面长期停在“检查中”。
 
 ## 0.2.2 重点更新
 
@@ -88,6 +97,7 @@ DOCX 中的图片不会直接嵌入 Markdown，也不会尝试上传到微信。
 - macOS 原生“关于”菜单，显示 UrbanComp Logo、版本和官网。
 - 产品新 Logo 同时用于窗口左上角、Dock 和 macOS App 图标；Dock 图标按 macOS 网格保留 100px 透明安全边界，视觉尺寸与系统图标一致。
 - 未保存工程关闭时使用同步的 macOS 原生确认框；可直接选择“不保存并退出”，不必先保存工程。
+- 顶部工具栏和“帮助”菜单可主动检查 GitHub Release 更新；发现新版本后由用户决定是否下载，不会强制安装。
 - 完全本地运行，无云端服务和遥测。
 
 ## 运行要求
@@ -133,6 +143,7 @@ pnpm package:mac
 6. 使用“保存工程”保留完整编辑状态。
 7. 使用“导出 MD”生成可读的扩展 Markdown，或使用“导出 PDF”保存当前排版效果。
 8. 点击“复制到微信”，再粘贴到微信公众号后台。
+9. 需要确认新版本时，点击顶部“检查更新”；除这次主动操作外，应用不会联网检查。
 
 ## 工程与内容文件
 
@@ -173,7 +184,8 @@ pnpm package:mac
 - 渲染器启用上下文隔离和沙箱，不直接获得 Node.js 权限。
 - 文件和剪贴板操作只通过受控 preload API 进入主进程。
 - Markdown 和 Word 导入会移除脚本、iframe、远程图片和事件属性。
-- 不请求网络资源；“UrbanComp 官网”按钮仅在用户主动点击时打开浏览器。
+- 编辑、预览、保存、导出和复制均不请求网络资源；仅当用户主动点击“检查更新”时访问本项目的 GitHub Release API，选择“下载更新”后才打开 DMG 下载地址。
+- “UrbanComp 官网”按钮仅在用户主动点击时打开浏览器。
 
 ## 微信兼容说明
 
