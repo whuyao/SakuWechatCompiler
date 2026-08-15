@@ -184,6 +184,10 @@ button {
   color: #315f4d;
 }
 
+.top-actions .outline-action.pinned {
+  box-shadow: inset 0 -2px 0 #4f7968;
+}
+
 .action-icon {
   color: #d96b86;
   font-size: 10px;
@@ -898,10 +902,19 @@ button {
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
+  zoom: var(--page-zoom, 1);
 }
 
 .source-pane,
 .preview-pane {
+  min-width: 0;
+}
+
+.preview-pane {
+  position: relative;
+}
+
+.preview-paper-viewport {
   min-width: 0;
 }
 
@@ -958,6 +971,61 @@ button {
   border-radius: 3px;
   background: var(--theme-paper, #fff);
   box-shadow: 0 16px 45px rgba(63, 54, 44, 0.12);
+}
+
+.preview-zoom-controls {
+  position: fixed;
+  right: 22px;
+  bottom: 40px;
+  z-index: 25;
+  display: grid;
+  grid-template-columns: 34px 58px 34px;
+  overflow: hidden;
+  border: 1px solid rgba(102, 95, 86, 0.36);
+  border-radius: 9px;
+  background: rgba(251, 249, 245, 0.94);
+  box-shadow: 0 7px 24px rgba(44, 39, 34, 0.2);
+  backdrop-filter: blur(14px);
+}
+
+.preview-zoom-controls button {
+  display: grid;
+  height: 32px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-right: 1px solid rgba(121, 113, 103, 0.22);
+  background: transparent;
+  color: #4d514e;
+  cursor: pointer;
+}
+
+.preview-zoom-controls button:last-child {
+  border-right: 0;
+}
+
+.preview-zoom-controls button:hover:not(:disabled) {
+  background: #ece7df;
+}
+
+.preview-zoom-controls button:active:not(:disabled) {
+  background: #dfd9cf;
+}
+
+.preview-zoom-controls button:disabled {
+  color: #b9b3aa;
+  cursor: default;
+}
+
+.preview-zoom-controls .preview-zoom-value {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.preview-zoom-icon {
+  width: 17px;
+  height: 17px;
 }
 
 .paper.final-mode {
@@ -1358,6 +1426,22 @@ button {
   animation: drawer-in 160ms ease-out;
 }
 
+.utility-drawer.pinned {
+  top: 156px;
+  width: 300px;
+  padding-top: 18px;
+  box-shadow: -1px 0 0 rgba(55, 48, 41, 0.06);
+  animation: none;
+}
+
+.app-shell.outline-pinned .workspace {
+  margin-right: 300px;
+}
+
+.app-shell.outline-pinned .preview-zoom-controls {
+  right: 322px;
+}
+
 .drawer-heading {
   display: flex;
   align-items: flex-start;
@@ -1372,16 +1456,38 @@ button {
   font-size: 20px;
 }
 
-.drawer-heading > button {
+.drawer-heading-actions {
+  display: flex;
+  gap: 7px;
+}
+
+.drawer-heading-actions button {
+  display: grid;
   width: 29px;
   height: 29px;
   padding: 0;
+  place-items: center;
   border: 1px solid #d3ccc1;
   border-radius: 50%;
   background: #fff;
   color: #756f67;
   cursor: pointer;
+}
+
+.drawer-heading-actions button:last-child {
   font-size: 18px;
+}
+
+.drawer-heading-actions button:hover,
+.drawer-heading-actions button.active {
+  border-color: #668779;
+  background: #e5f0eb;
+  color: #315f4d;
+}
+
+.drawer-pin-icon {
+  width: 14px;
+  height: 14px;
 }
 
 .drawer-hint {

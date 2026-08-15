@@ -11,8 +11,11 @@ import {
   AlignRightIcon,
   ClearFormattingIcon,
   FormatPainterIcon,
+  PinIcon,
   RedoIcon,
-  UndoIcon
+  UndoIcon,
+  ZoomInIcon,
+  ZoomOutIcon
 } from './components/ToolbarIcons'
 import { BOX_PRESETS } from './editor/boxPresets'
 import { SakuBox, SakuCaption, SakuCitation, SakuImagePlaceholder, SakuTable } from './editor/extensions'
@@ -26,6 +29,13 @@ import {
 import { createProject, parseProject } from './lib/project'
 import { applyFormatBrush, captureFormatBrush, type FormatBrushSnapshot } from './lib/formatBrush'
 import { buildMarkdownOutline, type MarkdownOutlineItem } from './lib/outline'
+import {
+  DEFAULT_PREVIEW_ZOOM,
+  MAX_PREVIEW_ZOOM,
+  MIN_PREVIEW_ZOOM,
+  normalizePreviewZoom,
+  stepPreviewZoom
+} from './lib/previewZoom'
 import { copyWechatRichText, renderWechatHtml } from './lib/wechat'
 import { DEFAULT_WECHAT_THEME_ID, getWechatTheme, WECHAT_THEMES } from './lib/wechatThemes'
 import appLogo from '../resources/app-logo-source.png'
@@ -56,7 +66,19 @@ const FONT_OPTIONS = [
   { label: '苹方', value: '"PingFang SC", sans-serif' },
   { label: '宋体风格', value: 'Songti SC, STSong, serif' },
   { label: '黑体风格', value: 'Heiti SC, STHeiti, sans-serif' },
-  { label: '等宽字体', value: 'SFMono-Regular, Menlo, Monaco, monospace' }
+  { label: '楷体风格', value: '"Kaiti SC", STKaiti, KaiTi, serif' },
+  { label: '仿宋风格', value: 'STFangsong, FangSong, serif' },
+  { label: '冬青黑体', value: '"Hiragino Sans GB", "PingFang SC", sans-serif' },
+  { label: '圆体风格', value: '"Yuanti SC", "PingFang SC", sans-serif' },
+  { label: '等宽字体', value: 'SFMono-Regular, Menlo, Monaco, monospace' },
+  { label: 'Helvetica Neue', value: '"Helvetica Neue", Helvetica, Arial, sans-serif' },
+  { label: 'Arial', value: 'Arial, Helvetica, sans-serif' },
+  { label: 'Avenir Next', value: '"Avenir Next", Avenir, sans-serif' },
+  { label: 'Georgia', value: 'Georgia, "Times New Roman", serif' },
+  { label: 'Times New Roman', value: '"Times New Roman", Times, serif' },
+  { label: 'Baskerville', value: 'Baskerville, "Times New Roman", serif' },
+  { label: 'Palatino', value: 'Palatino, "Palatino Linotype", serif' },
+  { label: 'Menlo', value: 'Menlo, Monaco, monospace' }
 ]
 
 const FONT_SIZES = ['13px', '14px', '15px', '16px', '17px', '18px', '20px', '22px', '24px', '28px', '32px']
@@ -77,6 +99,10 @@ const readFavoriteThemes = (): string[] => {
 }
 
 const stripExtension = (name: string): string => name.replace(/\.(sakuwechat|markdown|md|docx)$/i, '')
+const PREVIEW_ZOOM_STORAGE_KEY = 'saku-wechat-preview-zoom'
+const OUTLINE_PINNED_STORAGE_KEY = 'saku-wechat-outline-pinned'
+
+const readOutlinePinned = (): boolean => localStorage.getItem(OUTLINE_PINNED_STORAGE_KEY) === 'true'
 
 function App() {
   const [documentTitle, setDocumentTitle] = useState('未命名文章')
@@ -100,7 +126,11 @@ function App() {
   const [wechatTheme, setWechatTheme] = useState(DEFAULT_WECHAT_THEME_ID)
   const [favoriteThemes, setFavoriteThemes] = useState<string[]>(readFavoriteThemes)
   const [previewMode, setPreviewMode] = useState<PreviewMode>('final')
-  const [utilityDrawer, setUtilityDrawer] = useState<UtilityDrawer>(null)
+  const [previewZoom, setPreviewZoom] = useState(() =>
+    normalizePreviewZoom(localStorage.getItem(PREVIEW_ZOOM_STORAGE_KEY))
+  )
+  const [outlinePinned, setOutlinePinned] = useState(readOutlinePinned)
+  const [utilityDrawer, setUtilityDrawer] = useState<UtilityDrawer>(() => readOutlinePinned() ? 'outline' : null)
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('boxes')
   const [checkingForUpdates, setCheckingForUpdates] = useState(false)
   const [formatBrushMode, setFormatBrushMode] = useState<FormatBrushMode>(null)
@@ -206,6 +236,14 @@ function App() {
   }, [favoriteThemes])
 
   useEffect(() => {
+    localStorage.setItem(PREVIEW_ZOOM_STORAGE_KEY, String(previewZoom))
+  }, [previewZoom])
+
+  useEffect(() => {
+    localStorage.setItem(OUTLINE_PINNED_STORAGE_KEY, String(outlinePinned))
+  }, [outlinePinned])
+
+  useEffect(() => {
     if (!formatBrushMode) return
     const cancelWithEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
@@ -276,11 +314,25 @@ function App() {
   const jumpToOutlineItem = (item: MarkdownOutlineItem) => {
     const textarea = sourceTextareaRef.current
     if (!textarea) return
-    setUtilityDrawer(null)
+    if (!outlinePinned) setUtilityDrawer(null)
     textarea.focus()
     textarea.setSelectionRange(item.start, item.end)
     const lineHeight = Number.parseFloat(window.getComputedStyle(textarea).lineHeight) || 23
     textarea.scrollTop = Math.max(0, (item.line - 1) * lineHeight - textarea.clientHeight * 0.28)
+  }
+
+  const closeUtilityDrawer = () => {
+    if (utilityDrawer === 'themes' && outlinePinned) {
+      setUtilityDrawer('outline')
+      return
+    }
+    if (utilityDrawer === 'outline') setOutlinePinned(false)
+    setUtilityDrawer(null)
+  }
+
+  const toggleOutlinePinned = () => {
+    setOutlinePinned((current) => !current)
+    setUtilityDrawer('outline')
   }
 
   const replaceMarkdownSelection = (
@@ -663,7 +715,7 @@ function App() {
   }, [editor, dirty, selectionRevision])
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${outlinePinned ? 'outline-pinned' : ''}`}>
       <header className="titlebar">
         <div className="titlebar-brand">
           <img className="brand-mark" src={appLogo} alt="SakuWechatCompiler logo" />
@@ -692,13 +744,20 @@ function App() {
           </button>
           <button
             className={`utility-action theme-action ${utilityDrawer === 'themes' ? 'active' : ''}`}
-            onClick={() => setUtilityDrawer((current) => current === 'themes' ? null : 'themes')}
+            onClick={() => setUtilityDrawer((current) => current === 'themes' ? (outlinePinned ? 'outline' : null) : 'themes')}
           >
             <span className="action-icon">●</span>主题
           </button>
           <button
-            className={`utility-action outline-action ${utilityDrawer === 'outline' ? 'active' : ''}`}
-            onClick={() => setUtilityDrawer((current) => current === 'outline' ? null : 'outline')}
+            className={`utility-action outline-action ${utilityDrawer === 'outline' ? 'active' : ''} ${outlinePinned ? 'pinned' : ''}`}
+            onClick={() => {
+              if (utilityDrawer === 'outline') {
+                if (outlinePinned) setOutlinePinned(false)
+                setUtilityDrawer(null)
+              } else {
+                setUtilityDrawer('outline')
+              }
+            }}
           >
             <span className="action-icon">☰</span>目录
           </button>
@@ -936,7 +995,10 @@ function App() {
         </aside>
 
         <main className="editor-stage">
-          <div className="dual-editor">
+          <div
+            className="dual-editor"
+            style={{ '--page-zoom': previewZoom / 100 } as CSSProperties}
+          >
             <section className="source-pane">
               <div className="canvas-toolbar">
                 <span>Markdown 文件</span>
@@ -965,20 +1027,48 @@ function App() {
                   </div>
                 </div>
               </div>
-              <div
-                className={`paper ${previewMode === 'final' ? 'final-mode' : ''}`}
-                style={{
-                  '--wechat-line-height': wechatLineHeight,
-                  '--theme-paper': selectedTheme.background
-                } as CSSProperties}
-              >
-                {previewMode === 'final' ? (
-                  <div className="wechat-final-preview" dangerouslySetInnerHTML={{ __html: wechatHtml }} />
-                ) : (
-                  <EditorContent editor={editor} />
-                )}
+              <div className="preview-paper-viewport">
+                <div
+                  className={`paper ${previewMode === 'final' ? 'final-mode' : ''}`}
+                  style={{
+                    '--wechat-line-height': wechatLineHeight,
+                    '--theme-paper': selectedTheme.background
+                  } as CSSProperties}
+                >
+                  {previewMode === 'final' ? (
+                    <div className="wechat-final-preview" dangerouslySetInnerHTML={{ __html: wechatHtml }} />
+                  ) : (
+                    <EditorContent editor={editor} />
+                  )}
+                </div>
               </div>
             </section>
+          </div>
+          <div className="preview-zoom-controls" role="group" aria-label="双排页面缩放">
+            <button
+              aria-label="缩小双排页面"
+              title="缩小双排页面"
+              disabled={previewZoom <= MIN_PREVIEW_ZOOM}
+              onClick={() => setPreviewZoom((value) => stepPreviewZoom(value, -1))}
+            >
+              <ZoomOutIcon className="preview-zoom-icon" />
+            </button>
+            <button
+              className="preview-zoom-value"
+              aria-label={`双排页面当前缩放 ${previewZoom}%，点击恢复 100%`}
+              title="恢复双排页面到 100%"
+              onClick={() => setPreviewZoom(DEFAULT_PREVIEW_ZOOM)}
+            >
+              {previewZoom}%
+            </button>
+            <button
+              aria-label="放大双排页面"
+              title="放大双排页面"
+              disabled={previewZoom >= MAX_PREVIEW_ZOOM}
+              onClick={() => setPreviewZoom((value) => stepPreviewZoom(value, 1))}
+            >
+              <ZoomInIcon className="preview-zoom-icon" />
+            </button>
           </div>
         </main>
 
@@ -986,18 +1076,36 @@ function App() {
 
       {utilityDrawer && (
         <>
-          <button
-            className="drawer-backdrop"
-            aria-label="关闭侧栏"
-            onClick={() => setUtilityDrawer(null)}
-          />
-          <aside className="utility-drawer" aria-label={utilityDrawer === 'themes' ? '主题选择' : '文章目录'}>
+          {!(utilityDrawer === 'outline' && outlinePinned) && (
+            <button
+              className="drawer-backdrop"
+              aria-label="关闭侧栏"
+              onClick={closeUtilityDrawer}
+            />
+          )}
+          <aside
+            className={`utility-drawer ${utilityDrawer === 'outline' && outlinePinned ? 'pinned' : ''}`}
+            aria-label={utilityDrawer === 'themes' ? '主题选择' : '文章目录'}
+          >
             <div className="drawer-heading">
               <div>
                 <span className="eyebrow">{utilityDrawer === 'themes' ? 'WECHAT THEMES' : 'DOCUMENT OUTLINE'}</span>
                 <h2>{utilityDrawer === 'themes' ? '选择公众号主题' : '文章目录'}</h2>
               </div>
-              <button aria-label="关闭" onClick={() => setUtilityDrawer(null)}>×</button>
+              <div className="drawer-heading-actions">
+                {utilityDrawer === 'outline' && (
+                  <button
+                    className={outlinePinned ? 'active' : ''}
+                    aria-label={outlinePinned ? '取消固定文章目录' : '固定文章目录'}
+                    aria-pressed={outlinePinned}
+                    title={outlinePinned ? '取消固定' : '固定在右侧'}
+                    onClick={toggleOutlinePinned}
+                  >
+                    <PinIcon className="drawer-pin-icon" />
+                  </button>
+                )}
+                <button aria-label="关闭" title="关闭侧栏" onClick={closeUtilityDrawer}>×</button>
+              </div>
             </div>
 
             {utilityDrawer === 'themes' ? (
@@ -1034,7 +1142,7 @@ function App() {
               </>
             ) : (
               <>
-                <p className="drawer-hint">自动读取 Markdown 中的 H1–H5。点击标题可跳到左侧原文。</p>
+                <p className="drawer-hint">自动读取 Markdown 中的 H1–H5。点击标题可跳到左侧原文；固定后目录会常驻右侧。</p>
                 {documentOutline.length ? (
                   <nav className="outline-list" aria-label="标题列表">
                     {documentOutline.map((item) => (

@@ -59,3 +59,24 @@ export const ClearFormattingIcon = ({ className }: ToolbarIconProps) => (
     <path d="m10 9 5 5M7 20h14" />
   </svg>
 )
+
+export const ZoomOutIcon = ({ className }: ToolbarIconProps) => (
+  <svg {...iconProps} className={className}>
+    <circle cx="10.5" cy="10.5" r="6.5" />
+    <path d="m15.2 15.2 5 5M7.5 10.5h6" />
+  </svg>
+)
+
+export const ZoomInIcon = ({ className }: ToolbarIconProps) => (
+  <svg {...iconProps} className={className}>
+    <circle cx="10.5" cy="10.5" r="6.5" />
+    <path d="m15.2 15.2 5 5M7.5 10.5h6M10.5 7.5v6" />
+  </svg>
+)
+
+export const PinIcon = ({ className }: ToolbarIconProps) => (
+  <svg {...iconProps} className={className}>
+    <path d="m8 3 8 8M14.5 2.5l7 7-3 1-4.5 4.5-1 4-8-8 4-1 4.5-4.5 1-3Z" />
+    <path d="m9 15-6 6" />
+  </svg>
+)
