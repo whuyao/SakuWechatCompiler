@@ -2,7 +2,7 @@
 
 SakuWechatCompiler 是一款面向微信公众号的本地排版编辑器。主编辑区左侧编写 Markdown，右侧实时显示微信公众号排版效果。应用仅面向 Apple Silicon Mac，安装后无需联网即可编辑、保存和生成微信富文本。
 
-当前版本：`0.2.6`
+当前版本：`0.2.7`
 
 由 [UrbanComp 团队](https://urbancomp.net)制作。
 
@@ -34,7 +34,7 @@ SakuWechatCompiler 是一款面向微信公众号的本地排版编辑器。主�
 
 ## 下载与安装
 
-1. 在 [GitHub Releases](https://github.com/whuyao/SakuWechatCompiler/releases) 下载 `SakuWechatCompiler-0.2.6-arm64.dmg`。
+1. 在 [GitHub Releases](https://github.com/whuyao/SakuWechatCompiler/releases) 下载 `SakuWechatCompiler-0.2.7-arm64.dmg`。
 2. 打开 DMG，把 SakuWechatCompiler 拖入“应用程序”。
 3. 当前安装包尚未使用 Developer ID 签名。首次启动如被 macOS 拦截，请在 Finder 中右键应用并选择“打开”。
 
@@ -57,6 +57,12 @@ SakuWechatCompiler 是一款面向微信公众号的本地排版编辑器。主�
 ```
 
 DOCX 中的图片不会直接嵌入 Markdown，也不会尝试上传到微信。应用会按顺序生成 `word-image-01`、`word-image-02` 等占位符，保留图片的替代文字并提示图片数量；排版完成后，在微信公众号后台对应位置重新插入图片即可。
+
+## 0.2.7 重点更新
+
+- 左侧 Markdown 纸张会随右侧较高页面和可用编辑空间自动伸展，不再停留在固定的视口高度。
+- Markdown 内容较长时文本域会随内容自然增高；长 URL、英文和连续字符会在纸张内自动换行。
+- 保持与固定文章目录、窗口尺寸变化及双排页面缩放的布局兼容。
 
 ## 0.2.6 重点更新
 
