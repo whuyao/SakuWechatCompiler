@@ -149,7 +149,19 @@ describe('Saku 扩展 Markdown', () => {
       '"PingFang SC", sans-serif',
       '"Songti SC", STSong, serif',
       '"Heiti SC", STHeiti, sans-serif',
-      'SFMono-Regular, Menlo, Monaco, monospace'
+      '"Kaiti SC", STKaiti, KaiTi, serif',
+      'STFangsong, FangSong, serif',
+      '"Hiragino Sans GB", "PingFang SC", sans-serif',
+      '"Yuanti SC", "PingFang SC", sans-serif',
+      'SFMono-Regular, Menlo, Monaco, monospace',
+      '"Helvetica Neue", Helvetica, Arial, sans-serif',
+      'Arial, Helvetica, sans-serif',
+      '"Avenir Next", Avenir, sans-serif',
+      'Georgia, "Times New Roman", serif',
+      '"Times New Roman", Times, serif',
+      'Baskerville, "Times New Roman", serif',
+      'Palatino, "Palatino Linotype", serif',
+      'Menlo, Monaco, monospace'
     ]
 
     fontFamilies.forEach((fontFamily) => {
