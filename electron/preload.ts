@@ -2,10 +2,10 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 const api = {
   importContent: () => ipcRenderer.invoke('content:import'),
-  saveDocument: (request: { content: string; currentPath?: string | null; saveAs?: boolean }) =>
+  saveDocument: (request: { content: string; currentPath?: string | null; suggestedName?: string; sourcePath?: string | null; saveAs?: boolean }) =>
     ipcRenderer.invoke('document:save', request),
   openProject: () => ipcRenderer.invoke('project:open'),
-  saveProject: (request: { content: string; currentPath?: string | null; saveAs?: boolean }) =>
+  saveProject: (request: { content: string; currentPath?: string | null; suggestedName?: string; sourcePath?: string | null; saveAs?: boolean }) =>
     ipcRenderer.invoke('project:save', request),
   exportPdf: (request: { html: string; title: string }) =>
     ipcRenderer.invoke('document:export-pdf', request),

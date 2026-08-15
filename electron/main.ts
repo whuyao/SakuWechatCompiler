@@ -14,11 +14,14 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
 import * as mammoth from 'mammoth'
 import { createPrintablePdfHtml } from '../src/lib/pdf'
+import { buildSuggestedFileName } from '../src/lib/fileNames'
 import { compareVersions, parseGitHubRelease, type UpdateCheckResult } from '../src/lib/update'
 
 type SaveRequest = {
   content: string
   currentPath?: string | null
+  suggestedName?: string
+  sourcePath?: string | null
   saveAs?: boolean
 }
 
@@ -304,7 +307,11 @@ const registerIpc = (): void => {
     if (!path || request.saveAs) {
       const result = await dialog.showSaveDialog({
         title: '保存 Markdown 文件',
-        defaultPath: path ? join(dirname(path), basename(path)) : '未命名文章.md',
+        defaultPath: path
+          ? join(dirname(path), basename(path))
+          : request.sourcePath
+            ? join(dirname(request.sourcePath), buildSuggestedFileName(request.suggestedName, '未命名文章', 'md'))
+            : buildSuggestedFileName(request.suggestedName, '未命名文章', 'md'),
         filters: [{ name: 'Markdown', extensions: ['md'] }]
       })
       if (result.canceled || !result.filePath) return null
@@ -336,7 +343,11 @@ const registerIpc = (): void => {
     if (!path || request.saveAs) {
       const result = await dialog.showSaveDialog({
         title: '保存 SakuWechatCompiler 工程',
-        defaultPath: path ? join(dirname(path), basename(path)) : '未命名工程.sakuwechat',
+        defaultPath: path
+          ? join(dirname(path), basename(path))
+          : request.sourcePath
+            ? join(dirname(request.sourcePath), buildSuggestedFileName(request.suggestedName, '未命名工程', 'sakuwechat'))
+            : buildSuggestedFileName(request.suggestedName, '未命名工程', 'sakuwechat'),
         filters: [{ name: 'SakuWechatCompiler 工程', extensions: ['sakuwechat'] }]
       })
       if (result.canceled || !result.filePath) return null

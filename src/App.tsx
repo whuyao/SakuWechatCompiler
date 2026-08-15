@@ -5,6 +5,15 @@ import TextAlign from '@tiptap/extension-text-align'
 import { FontSize, TextStyle } from '@tiptap/extension-text-style'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import {
+  AlignCenterIcon,
+  AlignLeftIcon,
+  AlignRightIcon,
+  ClearFormattingIcon,
+  FormatPainterIcon,
+  RedoIcon,
+  UndoIcon
+} from './components/ToolbarIcons'
 import { BOX_PRESETS } from './editor/boxPresets'
 import { SakuBox, SakuCaption, SakuCitation, SakuImagePlaceholder, SakuTable } from './editor/extensions'
 import {
@@ -15,6 +24,7 @@ import {
   sanitizeEditorHtml
 } from './lib/markdown'
 import { createProject, parseProject } from './lib/project'
+import { applyFormatBrush, captureFormatBrush, type FormatBrushSnapshot } from './lib/formatBrush'
 import { buildMarkdownOutline, type MarkdownOutlineItem } from './lib/outline'
 import { copyWechatRichText, renderWechatHtml } from './lib/wechat'
 import { DEFAULT_WECHAT_THEME_ID, getWechatTheme, WECHAT_THEMES } from './lib/wechatThemes'
@@ -55,6 +65,7 @@ type Toast = { message: string; kind: 'success' | 'error' | 'info' }
 type PreviewMode = 'final' | 'visual'
 type UtilityDrawer = 'themes' | 'outline' | null
 type SidebarTab = 'boxes' | 'academic' | 'image'
+type FormatBrushMode = 'single' | 'continuous' | null
 
 const readFavoriteThemes = (): string[] => {
   try {
@@ -71,6 +82,7 @@ function App() {
   const [documentTitle, setDocumentTitle] = useState('未命名文章')
   const [projectPath, setProjectPath] = useState<string | null>(null)
   const [markdownPath, setMarkdownPath] = useState<string | null>(null)
+  const [importedDocumentPath, setImportedDocumentPath] = useState<string | null>(null)
   const [projectCreatedAt, setProjectCreatedAt] = useState<string | undefined>()
   const [dirty, setDirty] = useState(false)
   const [source, setSource] = useState(SAMPLE_MARKDOWN)
@@ -91,12 +103,31 @@ function App() {
   const [utilityDrawer, setUtilityDrawer] = useState<UtilityDrawer>(null)
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('boxes')
   const [checkingForUpdates, setCheckingForUpdates] = useState(false)
+  const [formatBrushMode, setFormatBrushMode] = useState<FormatBrushMode>(null)
   const sourceSyncTimer = useRef<number | null>(null)
   const sourceTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const formatBrushRef = useRef<FormatBrushSnapshot | null>(null)
+  const formatBrushModeRef = useRef<FormatBrushMode>(null)
+  const formatBrushApplyTimer = useRef<number | null>(null)
+  const formatBrushApplyingRef = useRef(false)
+  const lastFormatBrushRangeRef = useRef<{ from: number; to: number } | null>(null)
 
   const notify = (message: string, kind: Toast['kind'] = 'success') => {
     setToast({ message, kind })
     window.setTimeout(() => setToast(null), 2800)
+  }
+
+  const updateFormatBrushMode = (mode: FormatBrushMode) => {
+    formatBrushModeRef.current = mode
+    setFormatBrushMode(mode)
+  }
+
+  const clearFormatBrush = () => {
+    if (formatBrushApplyTimer.current) window.clearTimeout(formatBrushApplyTimer.current)
+    formatBrushApplyTimer.current = null
+    formatBrushRef.current = null
+    lastFormatBrushRangeRef.current = null
+    updateFormatBrushMode(null)
   }
 
   const editor = useEditor({
@@ -124,7 +155,46 @@ function App() {
       setSource(htmlToMarkdown(currentEditor.getHTML()))
       setDirty(true)
     },
-    onSelectionUpdate: () => setSelectionRevision((revision) => revision + 1)
+    onSelectionUpdate: ({ editor: currentEditor }) => {
+      setSelectionRevision((revision) => revision + 1)
+      if (formatBrushApplyingRef.current) return
+      const snapshot = formatBrushRef.current
+      const mode = formatBrushModeRef.current
+      if (!snapshot || !mode) return
+
+      const { from, to } = currentEditor.state.selection
+      if (from === to) {
+        lastFormatBrushRangeRef.current = null
+        return
+      }
+      if (from === snapshot.sourceFrom && to === snapshot.sourceTo) return
+      if (lastFormatBrushRangeRef.current?.from === from && lastFormatBrushRangeRef.current.to === to) return
+
+      if (formatBrushApplyTimer.current) window.clearTimeout(formatBrushApplyTimer.current)
+      formatBrushApplyTimer.current = window.setTimeout(() => {
+        formatBrushApplyTimer.current = null
+        const liveSnapshot = formatBrushRef.current
+        const liveMode = formatBrushModeRef.current
+        if (!liveSnapshot || !liveMode) return
+
+        const selection = currentEditor.state.selection
+        if (selection.empty || (selection.from === liveSnapshot.sourceFrom && selection.to === liveSnapshot.sourceTo)) return
+
+        if (liveMode === 'single') clearFormatBrush()
+        else lastFormatBrushRangeRef.current = { from: selection.from, to: selection.to }
+
+        formatBrushApplyingRef.current = true
+        let applied = false
+        try {
+          applied = applyFormatBrush(currentEditor, liveSnapshot)
+        } finally {
+          formatBrushApplyingRef.current = false
+        }
+        if (applied) {
+          notify(liveMode === 'continuous' ? '格式已应用，连续格式刷仍处于开启状态。' : '格式刷已应用到目标文字。')
+        }
+      }, 120)
+    }
   })
 
   useEffect(() => {
@@ -135,9 +205,20 @@ function App() {
     localStorage.setItem('saku-wechat-favorite-themes', JSON.stringify(favoriteThemes))
   }, [favoriteThemes])
 
+  useEffect(() => {
+    if (!formatBrushMode) return
+    const cancelWithEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      clearFormatBrush()
+    }
+    window.addEventListener('keydown', cancelWithEscape)
+    return () => window.removeEventListener('keydown', cancelWithEscape)
+  }, [formatBrushMode])
+
   useEffect(
     () => () => {
       if (sourceSyncTimer.current) window.clearTimeout(sourceSyncTimer.current)
+      if (formatBrushApplyTimer.current) window.clearTimeout(formatBrushApplyTimer.current)
     },
     []
   )
@@ -363,6 +444,7 @@ function App() {
       setDocumentTitle(stripExtension(result.name))
       setProjectPath(null)
       setMarkdownPath(result.kind === 'markdown' ? result.path : null)
+      setImportedDocumentPath(result.path)
       setProjectCreatedAt(undefined)
       setDirty(true)
 
@@ -386,6 +468,7 @@ function App() {
       setDocumentTitle(project.title)
       setProjectPath(result.path)
       setMarkdownPath(null)
+      setImportedDocumentPath(null)
       setProjectCreatedAt(project.createdAt)
       setWechatLineHeight(project.settings.wechatLineHeight)
       setWechatTheme(project.settings.wechatTheme)
@@ -413,6 +496,8 @@ function App() {
       const result = await window.saku.saveProject({
         content: JSON.stringify(project, null, 2),
         currentPath: projectPath,
+        suggestedName: documentTitle,
+        sourcePath: importedDocumentPath,
         saveAs
       })
       if (!result) return
@@ -432,6 +517,8 @@ function App() {
       const result = await window.saku.saveDocument({
         content: currentMarkdown(),
         currentPath: markdownPath,
+        suggestedName: documentTitle,
+        sourcePath: importedDocumentPath,
         saveAs
       })
       if (!result) return
@@ -484,6 +571,40 @@ function App() {
     }
   }
 
+  const handleFormatBrushClick = (event: MouseEvent<HTMLButtonElement>) => {
+    if (!editor) return
+    if (previewMode !== 'visual') {
+      notify('请先切换到右侧“可视化编辑”，选取样本文字后再使用格式刷。', 'info')
+      return
+    }
+
+    if (event.detail >= 2) {
+      if (!formatBrushRef.current) formatBrushRef.current = captureFormatBrush(editor)
+      lastFormatBrushRangeRef.current = null
+      updateFormatBrushMode('continuous')
+      notify('连续格式刷已开启，可以依次选择多处目标文字；按 Esc 或再次点击可退出。', 'info')
+      return
+    }
+
+    if (formatBrushModeRef.current) {
+      clearFormatBrush()
+      notify('已取消格式刷。', 'info')
+      return
+    }
+
+    formatBrushRef.current = captureFormatBrush(editor)
+    lastFormatBrushRangeRef.current = null
+    updateFormatBrushMode('single')
+    notify('格式已取样，请选择一处目标文字；双击格式刷可连续使用。', 'info')
+  }
+
+  const changePreviewMode = (mode: PreviewMode) => {
+    if (mode !== 'visual') {
+      clearFormatBrush()
+    }
+    setPreviewMode(mode)
+  }
+
   const applyBox = (preset: string) => {
     if (!editor) return
     if (editor.isActive('sakuBox')) {
@@ -520,6 +641,12 @@ function App() {
 
   const textStyle = editor?.getAttributes('textStyle') ?? {}
   const activeColor = /^#[\da-f]{6}$/i.test(textStyle.color ?? '') ? textStyle.color : '#d96b86'
+  const selectedTextAlign = editor?.getAttributes('paragraph').textAlign ?? editor?.getAttributes('heading').textAlign
+  const activeTextAlign = selectedTextAlign === 'center' || selectedTextAlign === 'right' || selectedTextAlign === 'justify'
+    ? selectedTextAlign
+    : 'left'
+  const canUndo = editor?.can().undo() ?? false
+  const canRedo = editor?.can().redo() ?? false
   const selectedTheme = getWechatTheme(wechatTheme)
   const sortedThemes = useMemo(
     () => [...WECHAT_THEMES].sort((a, b) => Number(favoriteThemes.includes(b.id)) - Number(favoriteThemes.includes(a.id))),
@@ -540,10 +667,7 @@ function App() {
       <header className="titlebar">
         <div className="titlebar-brand">
           <img className="brand-mark" src={appLogo} alt="SakuWechatCompiler logo" />
-          <div>
-            <strong>SakuWechatCompiler</strong>
-            <span>{dirty ? '● 未保存' : '已保存'}</span>
-          </div>
+          <span className="brand-save-status">{dirty ? '● 未保存' : '已保存'}</span>
         </div>
 
         <div className="titlebar-document">
@@ -660,18 +784,65 @@ function App() {
                 <option value={2.2}>宽松 · 2.2</option>
               </select>
             </label>
-            <div className="ribbon-buttons compact" aria-label="字形">
-              <button className={editor?.isActive('bold') ? 'active' : ''} title="粗体" onClick={() => editor?.chain().focus().toggleBold().run()}><b>B</b></button>
-              <button className={editor?.isActive('italic') ? 'active' : ''} title="斜体" onClick={() => editor?.chain().focus().toggleItalic().run()}><i>I</i></button>
-              <button className={editor?.isActive('underline') ? 'active' : ''} title="下划线" onClick={() => editor?.chain().focus().toggleUnderline().run()}><u>U</u></button>
-              <button className={editor?.isActive('strike') ? 'active' : ''} title="删除线" onClick={() => editor?.chain().focus().toggleStrike().run()}><s>S</s></button>
-              <button title="左对齐" onClick={() => editor?.chain().focus().setTextAlign('left').run()}>左</button>
-              <button title="居中" onClick={() => editor?.chain().focus().setTextAlign('center').run()}>中</button>
-              <button title="右对齐" onClick={() => editor?.chain().focus().setTextAlign('right').run()}>右</button>
-              <button title="清除格式" onClick={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()}>清除</button>
+            <div className="ribbon-buttons compact" aria-label="文字格式和段落对齐">
+              <button
+                className="toolbar-icon-button"
+                aria-label="撤销"
+                title="撤销（⌘Z）"
+                disabled={!canUndo}
+                onClick={() => editor?.chain().focus().undo().run()}
+              >
+                <UndoIcon className="toolbar-svg-icon" />
+              </button>
+              <button
+                className="toolbar-icon-button"
+                aria-label="重做"
+                title="重做（⇧⌘Z）"
+                disabled={!canRedo}
+                onClick={() => editor?.chain().focus().redo().run()}
+              >
+                <RedoIcon className="toolbar-svg-icon" />
+              </button>
+              <span className="toolbar-button-separator" aria-hidden="true" />
+              <button className={`toolbar-icon-button ${editor?.isActive('bold') ? 'active' : ''}`} aria-label="粗体" title="粗体" onClick={() => editor?.chain().focus().toggleBold().run()}>
+                <span className="toolbar-letter-icon toolbar-bold-icon" aria-hidden="true">B</span>
+              </button>
+              <button className={`toolbar-icon-button ${editor?.isActive('italic') ? 'active' : ''}`} aria-label="斜体" title="斜体" onClick={() => editor?.chain().focus().toggleItalic().run()}>
+                <span className="toolbar-letter-icon toolbar-italic-icon" aria-hidden="true">I</span>
+              </button>
+              <button className={`toolbar-icon-button ${editor?.isActive('underline') ? 'active' : ''}`} aria-label="下划线" title="下划线" onClick={() => editor?.chain().focus().toggleUnderline().run()}>
+                <span className="toolbar-letter-icon toolbar-underline-icon" aria-hidden="true">U</span>
+              </button>
+              <button className={`toolbar-icon-button ${editor?.isActive('strike') ? 'active' : ''}`} aria-label="删除线" title="删除线" onClick={() => editor?.chain().focus().toggleStrike().run()}>
+                <span className="toolbar-letter-icon toolbar-strike-icon" aria-hidden="true">S</span>
+              </button>
+              <span className="toolbar-button-separator" aria-hidden="true" />
+              <button className={`toolbar-icon-button ${activeTextAlign === 'left' ? 'active' : ''}`} aria-label="左对齐" title="左对齐" onClick={() => editor?.chain().focus().setTextAlign('left').run()}>
+                <AlignLeftIcon className="toolbar-svg-icon" />
+              </button>
+              <button className={`toolbar-icon-button ${activeTextAlign === 'center' ? 'active' : ''}`} aria-label="居中对齐" title="居中对齐" onClick={() => editor?.chain().focus().setTextAlign('center').run()}>
+                <AlignCenterIcon className="toolbar-svg-icon" />
+              </button>
+              <button className={`toolbar-icon-button ${activeTextAlign === 'right' ? 'active' : ''}`} aria-label="右对齐" title="右对齐" onClick={() => editor?.chain().focus().setTextAlign('right').run()}>
+                <AlignRightIcon className="toolbar-svg-icon" />
+              </button>
+              <span className="toolbar-button-separator" aria-hidden="true" />
+              <button
+                aria-pressed={formatBrushMode !== null}
+                aria-label={formatBrushMode === 'continuous' ? '连续格式刷已开启' : formatBrushMode === 'single' ? '格式刷已取样，选择目标文字' : '格式刷'}
+                className={`toolbar-icon-button format-brush-button ${formatBrushMode ? 'active' : ''} ${formatBrushMode === 'continuous' ? 'continuous' : ''}`}
+                title="格式刷：单击使用一次，双击连续使用；按 Esc 或再次点击取消"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={handleFormatBrushClick}
+              >
+                <FormatPainterIcon className="toolbar-svg-icon" />
+              </button>
+              <button className="toolbar-icon-button" aria-label="清除格式" title="清除格式" onClick={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()}>
+                <ClearFormattingIcon className="toolbar-svg-icon" />
+              </button>
             </div>
           </div>
-          <small>切换到右侧“可视化编辑”后，可调整任意选中文字</small>
+          <small>支持撤销与重做；切换到右侧“可视化编辑”后，格式刷单击一次、双击连续</small>
         </div>
       </section>
 
@@ -789,8 +960,8 @@ function App() {
                 <div className="preview-toolbar-end">
                   <span>{selectedTheme.name} · {wordCount} 字</span>
                   <div className="preview-mode-switch" aria-label="预览模式">
-                    <button className={previewMode === 'final' ? 'active' : ''} onClick={() => setPreviewMode('final')}>最终预览</button>
-                    <button className={previewMode === 'visual' ? 'active' : ''} onClick={() => setPreviewMode('visual')}>可视化编辑</button>
+                    <button className={previewMode === 'final' ? 'active' : ''} onClick={() => changePreviewMode('final')}>最终预览</button>
+                    <button className={previewMode === 'visual' ? 'active' : ''} onClick={() => changePreviewMode('visual')}>可视化编辑</button>
                   </div>
                 </div>
               </div>

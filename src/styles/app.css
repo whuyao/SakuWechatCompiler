@@ -41,9 +41,9 @@ button {
 .titlebar {
   -webkit-app-region: drag;
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(220px, 360px) minmax(650px, 1fr);
+  grid-template-columns: auto minmax(150px, 260px) minmax(0, 1fr);
   align-items: center;
-  gap: 22px;
+  gap: 12px;
   padding: 0 16px 0 80px;
   border-bottom: 1px solid #d2cdc3;
   background: rgba(249, 247, 242, 0.96);
@@ -72,24 +72,14 @@ button {
   box-shadow: 0 1px 2px rgba(26, 37, 48, 0.12), 0 4px 12px rgba(26, 37, 48, 0.08);
 }
 
-.titlebar-brand div {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-}
-
-.titlebar-brand strong {
-  overflow: hidden;
-  font-size: 13px;
-  letter-spacing: 0.02em;
-  text-overflow: ellipsis;
+.brand-save-status {
+  color: #8b847a;
+  font-size: 10px;
   white-space: nowrap;
 }
 
-.titlebar-brand div span {
-  margin-top: 2px;
-  color: #8b847a;
-  font-size: 10px;
+.titlebar-document {
+  min-width: 0;
 }
 
 .titlebar-document input {
@@ -100,7 +90,7 @@ button {
   outline: none;
   background: transparent;
   color: #323530;
-  text-align: center;
+  text-align: left;
   font-size: 14px;
   font-weight: 600;
 }
@@ -113,8 +103,15 @@ button {
 
 .top-actions {
   display: flex;
+  min-width: 0;
   justify-content: flex-end;
   gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.top-actions::-webkit-scrollbar {
+  display: none;
 }
 
 .sync-badge {
@@ -265,12 +262,96 @@ button {
   color: #9c4d58;
 }
 
+.ribbon-buttons button:disabled {
+  border-color: #ddd7ce;
+  background: #f6f3ed;
+  color: #b9b3aa;
+  cursor: default;
+  opacity: 0.72;
+}
+
+.ribbon-buttons button:disabled:hover {
+  border-color: #ddd7ce;
+  background: #f6f3ed;
+  color: #b9b3aa;
+}
+
 .ribbon-buttons.compact {
   margin-left: 3px;
 }
 
 .ribbon-buttons.compact button {
   padding-inline: 7px;
+}
+
+.ribbon-buttons.compact .toolbar-icon-button {
+  display: inline-flex;
+  width: 30px;
+  min-width: 30px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.toolbar-letter-icon {
+  display: inline-flex;
+  height: 18px;
+  align-items: center;
+  color: currentColor;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  line-height: 18px;
+}
+
+.toolbar-bold-icon {
+  font-weight: 800;
+}
+
+.toolbar-italic-icon {
+  padding-right: 2px;
+  font-style: italic;
+}
+
+.toolbar-underline-icon {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.toolbar-strike-icon {
+  text-decoration: line-through;
+}
+
+.toolbar-svg-icon {
+  display: block;
+  width: 17px;
+  height: 17px;
+}
+
+.toolbar-button-separator {
+  width: 1px;
+  height: 20px;
+  margin: 0 2px;
+  background: #d3ccc1;
+}
+
+.format-brush-button.active {
+  position: relative;
+  border-color: #a45b6d;
+  background: #f4dfe4;
+  color: #913f54;
+  box-shadow: inset 0 0 0 1px rgba(164, 91, 109, 0.12);
+}
+
+.format-brush-button.continuous::after {
+  position: absolute;
+  right: 1px;
+  bottom: -1px;
+  color: #913f54;
+  content: "∞";
+  font-family: Georgia, serif;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .ribbon-divider {
@@ -1487,7 +1568,7 @@ button {
   }
 
   .titlebar {
-    grid-template-columns: 190px minmax(160px, 1fr) auto;
+    grid-template-columns: auto minmax(120px, 200px) minmax(0, 1fr);
     gap: 10px;
   }
 
