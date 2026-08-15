@@ -34,7 +34,7 @@ SakuWechatCompiler 是一款面向微信公众号的本地排版编辑器。主�
 
 ## 下载与安装
 
-1. 在 [GitHub Releases](https://github.com/whuyao/SakuWechatCompiler/releases) 下载 `SakuWechatCompiler-0.2.5-arm64.dmg`。
+1. 在 [GitHub Releases](https://github.com/whuyao/SakuWechatCompiler/releases) 下载 `SakuWechatCompiler-0.2.6-arm64.dmg`。
 2. 打开 DMG，把 SakuWechatCompiler 拖入“应用程序”。
 3. 当前安装包尚未使用 Developer ID 签名。首次启动如被 macOS 拦截，请在 Finder 中右键应用并选择“打开”。
 
