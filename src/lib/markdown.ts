@@ -3,6 +3,7 @@ import TurndownService from 'turndown'
 
 const ALLOWED_TAGS = new Set([
   'A',
+  'B',
   'BLOCKQUOTE',
   'BR',
   'CODE',
@@ -16,6 +17,7 @@ const ALLOWED_TAGS = new Set([
   'H5',
   'H6',
   'HR',
+  'I',
   'LI',
   'OL',
   'P',

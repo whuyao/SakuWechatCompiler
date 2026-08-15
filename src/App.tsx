@@ -804,16 +804,16 @@ function App() {
                 <RedoIcon className="toolbar-svg-icon" />
               </button>
               <span className="toolbar-button-separator" aria-hidden="true" />
-              <button className={`toolbar-icon-button ${editor?.isActive('bold') ? 'active' : ''}`} aria-label="粗体" title="粗体" onClick={() => editor?.chain().focus().toggleBold().run()}>
+              <button className={`toolbar-icon-button ${editor?.isActive('bold') ? 'active' : ''}`} aria-label="粗体" title="粗体" onMouseDown={(event) => event.preventDefault()} onClick={() => editor?.chain().focus().toggleBold().run()}>
                 <span className="toolbar-letter-icon toolbar-bold-icon" aria-hidden="true">B</span>
               </button>
-              <button className={`toolbar-icon-button ${editor?.isActive('italic') ? 'active' : ''}`} aria-label="斜体" title="斜体" onClick={() => editor?.chain().focus().toggleItalic().run()}>
+              <button className={`toolbar-icon-button ${editor?.isActive('italic') ? 'active' : ''}`} aria-label="斜体" title="斜体" onMouseDown={(event) => event.preventDefault()} onClick={() => editor?.chain().focus().toggleItalic().run()}>
                 <span className="toolbar-letter-icon toolbar-italic-icon" aria-hidden="true">I</span>
               </button>
-              <button className={`toolbar-icon-button ${editor?.isActive('underline') ? 'active' : ''}`} aria-label="下划线" title="下划线" onClick={() => editor?.chain().focus().toggleUnderline().run()}>
+              <button className={`toolbar-icon-button ${editor?.isActive('underline') ? 'active' : ''}`} aria-label="下划线" title="下划线" onMouseDown={(event) => event.preventDefault()} onClick={() => editor?.chain().focus().toggleUnderline().run()}>
                 <span className="toolbar-letter-icon toolbar-underline-icon" aria-hidden="true">U</span>
               </button>
-              <button className={`toolbar-icon-button ${editor?.isActive('strike') ? 'active' : ''}`} aria-label="删除线" title="删除线" onClick={() => editor?.chain().focus().toggleStrike().run()}>
+              <button className={`toolbar-icon-button ${editor?.isActive('strike') ? 'active' : ''}`} aria-label="删除线" title="删除线" onMouseDown={(event) => event.preventDefault()} onClick={() => editor?.chain().focus().toggleStrike().run()}>
                 <span className="toolbar-letter-icon toolbar-strike-icon" aria-hidden="true">S</span>
               </button>
               <span className="toolbar-button-separator" aria-hidden="true" />
