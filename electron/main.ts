@@ -202,9 +202,10 @@ const createWindow = (): void => {
     }
   })
   const windowId = window.id
+  let quittingAfterDiscard = false
 
   window.on('close', (event) => {
-    if (!dirtyWindows.get(windowId)) return
+    if (quittingAfterDiscard || !dirtyWindows.get(windowId)) return
 
     const response = dialog.showMessageBoxSync(window, {
       type: 'warning',
@@ -217,10 +218,17 @@ const createWindow = (): void => {
       noLink: true
     })
 
-    if (response === 0) event.preventDefault()
+    event.preventDefault()
+    if (response === 0) return
+
+    dirtyWindows.set(windowId, false)
+    quittingAfterDiscard = true
+    setImmediate(() => app.exit(0))
   })
 
-  window.on('closed', () => dirtyWindows.delete(windowId))
+  window.on('closed', () => {
+    dirtyWindows.delete(windowId)
+  })
 
   window.once('ready-to-show', () => {
     window.maximize()

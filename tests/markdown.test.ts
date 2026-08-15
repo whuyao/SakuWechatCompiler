@@ -115,6 +115,34 @@ describe('Saku 扩展 Markdown', () => {
     expect(markdown).not.toContain('saku-format')
   })
 
+  it('稳定导入 Word 粗体边界，并允许粗体继续叠加斜体', () => {
+    const cases = [
+      '<p>前文<strong>粗体</strong>后文</p>',
+      '<p>前文<strong>粗体 </strong>后文</p>',
+      '<p><strong>粗体</strong>，后文</p>',
+      '<p><b>旧式粗体</b>与<i>旧式斜体</i></p>',
+      '<p><strong><em>粗斜体</em></strong>后文</p>'
+    ]
+
+    cases.forEach((sourceHtml) => {
+      const markdown = richTextToMarkdown(sourceHtml)
+      const restored = markdownToHtml(markdown)
+      const sourceText = new DOMParser().parseFromString(sourceHtml, 'text/html').body.textContent
+      const restoredDocument = new DOMParser().parseFromString(restored, 'text/html')
+
+      expect(restoredDocument.body.textContent?.trim()).toBe(sourceText?.trim())
+      expect(markdown).not.toMatch(/\*\*[^*\n]*\s\*\*/)
+      expect(markdown.match(/\*\*/g)?.length ?? 0).toBeGreaterThanOrEqual(2)
+      expect(restoredDocument.querySelector('strong')).not.toBeNull()
+    })
+
+    const combined = richTextToMarkdown('<p>前文<strong><em>组合格式</em></strong>后文</p>')
+    const combinedHtml = markdownToHtml(combined)
+
+    expect(combined).toContain('***组合格式***')
+    expect(combinedHtml).toMatch(/<(strong|em)><(em|strong)>组合格式<\/\2><\/\1>/)
+  })
+
   it('安全往返包含引号的全部字体选项，不把 span 标签显示为正文', () => {
     const fontFamilies = [
       '-apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif',
